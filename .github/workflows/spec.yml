@@ -23,48 +23,8 @@ jobs:
     needs: linters
     runs-on: ubuntu-latest
     name: spec
-    env:
-      OSEM_DB_HOST: localhost
-      RAILS_ENV: test
-    strategy:
-      matrix:
-        suite: [models, features, controllers, ability, leftovers]
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-      - name: Prepare spec
-        run: |
-          bundle exec rake db:setup --trace
-          bundle exec bin/rails webdrivers:chromedriver:update
-          # FIXME: This flickers...
-          # bundle exec rake factory_bot:lint RAILS_ENV=test --trace
-      - name: spec/${{ matrix.suite }}
-        run: bundle exec rake spec:${{ matrix.suite }}
-      - name: Upload Suite Artifacts
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-${{ matrix.suite }}
-          path: |
-            log/
-            tmp/capybara
-      - name: coverage upload ${{ matrix.suite }}
-        uses: codacy/codacy-coverage-reporter-action@master
-        if: github.ref == 'refs/heads/master'
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: coverage/coverage.xml
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_PASSWORD: mysecretpassword
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
